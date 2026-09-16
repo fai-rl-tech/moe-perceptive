@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Terrain Traversal Without Motion Priors</title>
+    <meta name="description"
+      content="Expert-routed humanoid locomotion evaluated through the full deployment stack, with no motion-capture data and no learned motion prior.">
+
+    <!-- TODO before this goes public: this project is currently attached to a paper under
+     double-anonymous review (ICRA 2027). Do not link or deploy this page until the review
+     period allows it -- check the venue's policy on public project pages / preprints first. -->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@600;700&display=swap"
+      rel="stylesheet">
+    <link rel="stylesheet" href="static/css/style.css">
+  </head>
+  <body>
+
+    <header class="hero">
+      <div class="wrap">
+        <span class="venue-badge">ICRA 2027 &middot; submission</span>
+        <h1>Terrain Traversal Without Motion Priors:<br>Expert-Routed Humanoid
+          Locomotion at Deployment Fidelity</h1>
+        <!-- Anonymous for double-anonymous review; fill in after decisions are out. -->
+        <p class="authors">Anonymous Authors</p>
+        <p class="affiliations">Author information withheld for double-anonymous
+          review</p>
+
+        <div class="link-row">
+          <a class="link-btn primary" href="#">
+            <span class="icon">&#128196;</span> Paper (PDF)
+          </a>
+          <a class="link-btn" href="#">
+            <span class="icon">&#128187;</span> Code
+          </a>
+          <a class="link-btn" href="#video">
+            <span class="icon">&#127909;</span> Videos
+          </a>
+          <a class="link-btn" href="#bibtex">
+            <span class="icon">&#128221;</span> BibTeX
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <section class="abstract">
+      <div class="wrap">
+        <span class="kicker">Abstract</span>
+        <p>
+          State-of-the-art perceptive humanoid locomotion is mostly built on
+          retargeted motion
+          capture, a generative motion prior, and a distillation stage. We
+          report a complete system
+          that does not require this pipeline for a humanoid to cross varied
+          terrain. In its place, we
+          provide a five-expert mixture routed by a terrain classifier over a
+          sensed elevation grid,
+          and target every foothold with a model-based planner, refined by six
+          closed-form-gradient
+          steps on an interpolated terrain-cost field instead of picked from a
+          fixed grid. Driven
+          through the same perception-to-actuation software a robot would run,
+          inside a second,
+          deployment-fidelity simulator, it crosses an 85&nbsp;m five-segment
+          waypoint course 18 of 20
+          times end-to-end (90%, Wilson 95% CI 70&ndash;97) and succeeds 20/20
+          on four of five segments
+          scored alone, where an ablated configuration without the mixture and
+          without refinement
+          reaches 0% on both the stair and the hurdle segment. The continuous
+          refinement moves 72.4%
+          of foot placements across at least one grid-cell boundary, which
+          produces real sub-grid
+          correction. We also ran matched component studies to report what does
+          not account for it:
+          one expert equals five on the training distribution, four label-free
+          routers collapse to
+          near-uniform activation, and a self-supervised terrain embedding loses
+          to the privileged
+          label.
+        </p>
+      </div>
+    </section>
+
+    <section class="alt" id="architecture">
+      <div class="wrap">
+        <span class="kicker">Method</span>
+        <h2>System architecture</h2>
+        <div class="arch-figure">
+          <img src="static/images/architecture.png"
+            alt="System architecture: the deployment boundary between training-only components and what runs on the robot.">
+        </div>
+        <p class="arch-caption">
+          Everything below the dashed line runs unchanged in both simulators and
+          on a robot. Above it
+          is training-only: a privileged terrain label supervises the gate and,
+          in one configuration,
+          conditions the critic; a self-supervised depth embedding is the
+          alternative critic
+          conditioner compared against it. The deployed actor consumes neither.
+        </p>
+
+        <div class="component-grid">
+          <div class="component-card">
+            <span class="tag">No motion-prior dependency</span>
+            <h3>Mixture-of-experts gate</h3>
+            <p>
+              A terrain classifier routes a five-expert mixture over a sensed
+              local elevation grid.
+              The only privileged signal anywhere in the deployed path is the
+              terrain class used to
+              train the gate &mdash; no motion-capture data, no generative
+              motion prior.
+            </p>
+          </div>
+          <div class="component-card">
+            <span class="tag">Model-based, not learned</span>
+            <h3>Continuous foothold refinement</h3>
+            <p>
+              Every foothold target is refined by six closed-form
+              gradient-descent steps on an
+              interpolated terrain-cost field, instead of picked from a fixed
+              grid &mdash; real
+              sub-grid correction on 72.4% of placements.
+            </p>
+          </div>
+          <div class="component-card">
+            <span class="tag">Self-supervised, compared</span>
+            <h3>Terrain-affordance encoder</h3>
+            <p>
+              A temporal-contrastive embedding learned from the robot's own
+              depth stream, with no
+              terrain label. It's evaluated as an alternative critic conditioner
+              &mdash; it does not
+              drive the headline transfer result.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="results">
+      <div class="wrap">
+        <span class="kicker">Results</span>
+        <h2>Sim-to-sim transfer &amp; component analysis</h2>
+
+        <div class="results-grid">
+          <div class="result-card">
+            <h3>Chained waypoint course, deployment-fidelity simulator</h3>
+            <img src="static/images/results/course_results.png"
+              alt="Per-segment and chained-course success rates for the full system against an ablated configuration.">
+            <p class="note">n=20 per bar, Wilson 95% intervals. The ablated arm
+              removes the expert mixture and the continuous foothold
+              refinement.</p>
+          </div>
+          <div class="result-card">
+            <h3>Gate routing: privileged label vs. label-free</h3>
+            <img src="static/images/results/heatmap_B.png"
+              alt="Gate mass heatmap, privileged-label configuration, near-permutation.">
+            <p class="note">Privileged-label routing (left) is near-permutation;
+              every label-free router tried collapses toward uniform
+              activation.</p>
+          </div>
+        </div>
+
+        <div class="gallery-strip">
+          <div class="gallery-pair">
+            <div class="gallery-pair-imgs">
+              <img src="static/images/results/foothold_stairs_down.png"
+                alt="Stairs down terrain, visible view.">
+              <img src="static/images/results/foothold_stairs_down_hidden.png"
+                alt="Stairs down terrain, debug view with foothold markers.">
+            </div>
+            <figcaption>Stairs (down)</figcaption>
+          </div>
+          <div class="gallery-pair">
+            <div class="gallery-pair-imgs">
+              <img src="static/images/results/foothold_stairs_up.png"
+                alt="Stairs up terrain, visible view.">
+              <img src="static/images/results/foothold_stairs_up_hidden.png"
+                alt="Stairs up terrain, debug view with foothold markers.">
+            </div>
+            <figcaption>Stairs (up)</figcaption>
+          </div>
+          <div class="gallery-pair">
+            <div class="gallery-pair-imgs">
+              <img src="static/images/results/foothold_gap.png"
+                alt="Gap crossing terrain, visible view.">
+              <img src="static/images/results/foothold_gap_hidden.png"
+                alt="Gap crossing terrain, debug view with foothold markers.">
+            </div>
+            <figcaption>Gap crossing</figcaption>
+          </div>
+          <div class="gallery-pair">
+            <div class="gallery-pair-imgs">
+              <img src="static/images/results/foothold_hurdles.png"
+                alt="Hurdles terrain, visible view.">
+              <img src="static/images/results/foothold_hurdles_hidden.png"
+                alt="Hurdles terrain, debug view with foothold markers.">
+            </div>
+            <figcaption>Hurdles</figcaption>
+          </div>
+          <div class="gallery-pair">
+            <div class="gallery-pair-imgs">
+              <img src="static/images/results/foothold_hurdles2.png"
+                alt="Hurdles terrain, variant 2, visible view.">
+              <img src="static/images/results/foothold_hurdles2_hidden.png"
+                alt="Hurdles terrain, variant 2, debug view with foothold markers.">
+            </div>
+            <figcaption>Hurdles (variant 2)</figcaption>
+          </div>
+          <div class="gallery-pair">
+            <div class="gallery-pair-imgs">
+              <img src="static/images/results/foothold_columns.png"
+                alt="Columns terrain, visible view.">
+              <img src="static/images/results/foothold_columns_hidden.png"
+                alt="Columns terrain, debug view with foothold markers.">
+            </div>
+            <figcaption>Columns</figcaption>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="alt" id="video">
+      <div class="wrap">
+        <span class="kicker">Rollouts</span>
+        <h2>Deployment-fidelity rollouts, all course segments</h2>
+        <p class="arch-caption" style="margin-top:-8px;">
+          Front and back camera for each terrain segment of the chained waypoint
+          course.
+        </p>
+
+        <div class="video-grid">
+
+          <div class="video-card" data-segment="slope">
+            <div class="video-frame">
+              <video data-view="front" muted loop playsinline preload="auto"
+                poster>
+                <source src="videos/slope_front.mp4" type="video/mp4">
+              </video>
+              <video data-view="back" muted loop playsinline preload="none"
+                hidden poster>
+                <source src="videos/slope_back.mp4" type="video/mp4">
+              </video>
+              <div class="video-placeholder" data-view="front">
+                No clip yet &mdash; drop <code>videos/slope_front.mp4</code>
+              </div>
+              <div class="video-placeholder" data-view="back" hidden>
+                No clip yet &mdash; drop <code>videos/slope_back.mp4</code>
+              </div>
+            </div>
+            <div class="video-meta">
+              <h3>Slope</h3>
+              <div class="view-toggle">
+                <button data-view="front" class="active">Front</button>
+                <button data-view="back">Back</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="video-card" data-segment="height-field">
+            <div class="video-frame">
+              <video data-view="front" muted loop playsinline
+                preload="auto">
+                <source src="videos/height_field_front.mp4" type="video/mp4">
+              </video>
+              <video data-view="back" muted loop playsinline preload="none"
+                hidden>
+                <source src="videos/height_field_back.mp4" type="video/mp4">
+              </video>
+              <div class="video-placeholder" data-view="front">
+                No clip yet &mdash; drop
+                <code>videos/height_field_front.mp4</code>
+              </div>
+              <div class="video-placeholder" data-view="back" hidden>
+                No clip yet &mdash; drop
+                <code>videos/height_field_back.mp4</code>
+              </div>
+            </div>
+            <div class="video-meta">
+              <h3>Height-field</h3>
+              <div class="view-toggle">
+                <button data-view="front" class="active">Front</button>
+                <button data-view="back">Back</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="video-card" data-segment="random-spread">
+            <div class="video-frame">
+              <video data-view="front" muted loop playsinline
+                preload="auto">
+                <source src="videos/random_spread_front.mp4" type="video/mp4">
+              </video>
+              <video data-view="back" muted loop playsinline preload="none"
+                hidden>
+                <source src="videos/random_spread_back.mp4" type="video/mp4">
+              </video>
+              <div class="video-placeholder" data-view="front">
+                No clip yet &mdash; drop
+                <code>videos/random_spread_front.mp4</code>
+              </div>
+              <div class="video-placeholder" data-view="back" hidden>
+                No clip yet &mdash; drop
+                <code>videos/random_spread_back.mp4</code>
+              </div>
+            </div>
+            <div class="video-meta">
+              <h3>Random-spread obstacles</h3>
+              <div class="view-toggle">
+                <button data-view="front" class="active">Front</button>
+                <button data-view="back">Back</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="video-card" data-segment="up-down-stair">
+            <div class="video-frame">
+              <video data-view="front" muted loop playsinline
+                preload="auto">
+                <source src="videos/up_down_stair_front.mp4" type="video/mp4">
+              </video>
+              <video data-view="back" muted loop playsinline preload="none"
+                hidden>
+                <source src="videos/up_down_stair_back.mp4" type="video/mp4">
+              </video>
+              <div class="video-placeholder" data-view="front">
+                No clip yet &mdash; drop
+                <code>videos/up_down_stair_front.mp4</code>
+              </div>
+              <div class="video-placeholder" data-view="back" hidden>
+                No clip yet &mdash; drop
+                <code>videos/up_down_stair_back.mp4</code>
+              </div>
+            </div>
+            <div class="video-meta">
+              <h3>Up / down stairs</h3>
+              <div class="view-toggle">
+                <button data-view="front" class="active">Front</button>
+                <button data-view="back">Back</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="video-card" data-segment="hurdle">
+            <div class="video-frame">
+              <video data-view="front" muted loop playsinline
+                preload="auto">
+                <source src="videos/hurdle_front.mp4" type="video/mp4">
+              </video>
+              <video data-view="back" muted loop playsinline preload="none"
+                hidden>
+                <source src="videos/hurdle_back.mp4" type="video/mp4">
+              </video>
+              <div class="video-placeholder" data-view="front">
+                No clip yet &mdash; drop <code>videos/hurdle_front.mp4</code>
+              </div>
+              <div class="video-placeholder" data-view="back" hidden>
+                No clip yet &mdash; drop <code>videos/hurdle_back.mp4</code>
+              </div>
+            </div>
+            <div class="video-meta">
+              <h3>Hurdles</h3>
+              <div class="view-toggle">
+                <button data-view="front" class="active">Front</button>
+                <button data-view="back">Back</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="video-card" data-segment="chained-course">
+            <div class="video-frame">
+              <video data-view="front" muted loop playsinline
+                preload="auto">
+                <source src="videos/chained_course_front.mp4" type="video/mp4">
+              </video>
+              <video data-view="back" muted loop playsinline preload="none"
+                hidden>
+                <source src="videos/chained_course_back.mp4" type="video/mp4">
+              </video>
+              <div class="video-placeholder" data-view="front">
+                No clip yet &mdash; drop
+                <code>videos/chained_course_front.mp4</code>
+              </div>
+              <div class="video-placeholder" data-view="back" hidden>
+                No clip yet &mdash; drop
+                <code>videos/chained_course_back.mp4</code>
+              </div>
+            </div>
+            <div class="video-meta">
+              <h3>Chained course (all five, in order)</h3>
+              <div class="view-toggle">
+                <button data-view="front" class="active">Front</button>
+                <button data-view="back">Back</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <section id="bibtex">
+      <div class="wrap">
+        <span class="kicker">Cite</span>
+        <h2>BibTeX</h2>
+        <div class="bibtex-box">
+          <button class="copy-btn">Copy</button>
+          <code>@inproceedings{anonymous2027terrain,
+            title = {Terrain Traversal Without Motion Priors: Expert-Routed
+            Humanoid Locomotion at Deployment Fidelity},
+            author = {Anonymous Authors},
+            booktitle = {IEEE International Conference on Robotics and
+            Automation (ICRA)},
+            year = {2027},
+            note = {Under review}
+            }</code>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap">
+        Website template &mdash; adapt freely. Built for the paper above; not
+        yet linked publicly.
+      </div>
+    </footer>
+
+    <script src="static/js/main.js"></script>
+  </body>
+</html>
